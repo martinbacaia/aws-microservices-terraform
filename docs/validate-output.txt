@@ -1,0 +1,23 @@
+$ terraform version
+Terraform v1.9.8 on windows_amd64
+
+$ terraform fmt -check -recursive
+(no output — every .tf file is formatted)
+
+$ for d in bootstrap modules/* environments/*; do
+    (cd "$d" && terraform init -backend=false -input=false && terraform validate)
+  done
+
+==> bootstrap                Success! The configuration is valid.
+==> modules/vpc              Success! The configuration is valid.
+==> modules/rds-postgres     Success! The configuration is valid.
+==> modules/ecr-repo         Success! The configuration is valid.
+==> modules/alb              Success! The configuration is valid.
+==> modules/ecs-service      Success! The configuration is valid.
+==> modules/lambda-fn        Success! The configuration is valid.
+==> modules/api-gateway      Success! The configuration is valid.
+==> environments/dev         Success! The configuration is valid.
+==> environments/staging     Success! The configuration is valid.
+==> environments/prod        Success! The configuration is valid.
+
+11/11 stacks pass `terraform validate` against the AWS provider ~> 5.70.

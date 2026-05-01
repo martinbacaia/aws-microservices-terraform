@@ -23,8 +23,8 @@ module "rds" {
 
   database_name = "products"
 
-  deletion_protection = false
-  skip_final_snapshot = true
+  deletion_protection   = false
+  skip_final_snapshot   = true
   backup_retention_days = 1
 
   alarm_sns_topic_arn = aws_sns_topic.alerts.arn

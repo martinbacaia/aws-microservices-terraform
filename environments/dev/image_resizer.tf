@@ -29,11 +29,11 @@ module "image_resizer" {
 
   image_uri = "${module.image_resizer_ecr.repository_url}:${var.image_resizer_tag}"
 
-  memory_mb        = 1024
-  timeout_seconds  = 60
+  memory_mb            = 1024
+  timeout_seconds      = 60
   ephemeral_storage_mb = 1024
-  architectures    = ["arm64"]
-  tracing_mode     = "Active"
+  architectures        = ["arm64"]
+  tracing_mode         = "Active"
 
   environment_variables = {
     THUMBNAIL_BUCKET = aws_s3_bucket.thumbnails.id

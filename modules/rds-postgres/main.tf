@@ -137,10 +137,10 @@ resource "aws_db_parameter_group" "this" {
 resource "aws_db_instance" "this" {
   identifier = var.name
 
-  engine               = "postgres"
-  engine_version       = var.engine_version
-  instance_class       = var.instance_class
-  allocated_storage    = var.allocated_storage_gb
+  engine                = "postgres"
+  engine_version        = var.engine_version
+  instance_class        = var.instance_class
+  allocated_storage     = var.allocated_storage_gb
   max_allocated_storage = var.max_allocated_storage_gb
   storage_type          = var.storage_type
   storage_encrypted     = true

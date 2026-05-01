@@ -25,15 +25,15 @@ module "products_api" {
   }
 
   # ALB attachment — listener depends on whether HTTPS is on.
-  alb_listener_arn      = local.enable_https ? module.alb.https_listener_arn : module.alb.http_listener_arn
-  alb_security_group_id = module.alb.security_group_id
-  alb_arn_suffix        = module.alb.alb_arn_suffix
-  path_patterns         = ["/products", "/products/*"]
+  alb_listener_arn       = local.enable_https ? module.alb.https_listener_arn : module.alb.http_listener_arn
+  alb_security_group_id  = module.alb.security_group_id
+  alb_arn_suffix         = module.alb.alb_arn_suffix
+  path_patterns          = ["/products", "/products/*"]
   listener_rule_priority = 100
-  health_check_path     = "/health"
+  health_check_path      = "/health"
 
   desired_count       = 1
-  min_healthy_percent = 50  # dev — allow rolling with 1 task
+  min_healthy_percent = 50 # dev — allow rolling with 1 task
   max_percent         = 200
 
   log_retention_days  = 14

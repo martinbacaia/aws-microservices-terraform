@@ -95,9 +95,9 @@ variable "jwt_authorizers" {
     `authorization_type = "JWT"` and `authorizer_key = "<name>"`.
   EOT
   type = map(object({
-    issuer             = string       # e.g. https://cognito-idp.<region>.amazonaws.com/<pool-id>
-    audience           = list(string) # client ids
-    identity_sources   = optional(list(string), ["$request.header.Authorization"])
+    issuer           = string       # e.g. https://cognito-idp.<region>.amazonaws.com/<pool-id>
+    audience         = list(string) # client ids
+    identity_sources = optional(list(string), ["$request.header.Authorization"])
   }))
   default = {}
 }

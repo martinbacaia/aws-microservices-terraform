@@ -68,17 +68,17 @@ resource "aws_apigatewayv2_stage" "this" {
 
     # Common HTTP API access log fields. JSON keeps it queryable in Logs Insights.
     format = jsonencode({
-      requestId        = "$context.requestId"
-      ip               = "$context.identity.sourceIp"
-      requestTime      = "$context.requestTime"
-      httpMethod       = "$context.httpMethod"
-      routeKey         = "$context.routeKey"
-      status           = "$context.status"
-      protocol         = "$context.protocol"
-      responseLength   = "$context.responseLength"
-      integrationError = "$context.integrationErrorMessage"
+      requestId          = "$context.requestId"
+      ip                 = "$context.identity.sourceIp"
+      requestTime        = "$context.requestTime"
+      httpMethod         = "$context.httpMethod"
+      routeKey           = "$context.routeKey"
+      status             = "$context.status"
+      protocol           = "$context.protocol"
+      responseLength     = "$context.responseLength"
+      integrationError   = "$context.integrationErrorMessage"
       integrationLatency = "$context.integration.latency"
-      latency          = "$context.responseLatency"
+      latency            = "$context.responseLatency"
     })
   }
 

@@ -18,8 +18,8 @@ locals {
   region    = data.aws_region.current.name
   account   = data.aws_caller_identity.current.account_id
 
-  cluster_name = coalesce(var.cluster_name_override, var.name)
-  create_cluster = var.cluster_arn == null
+  cluster_name         = coalesce(var.cluster_name_override, var.name)
+  create_cluster       = var.cluster_arn == null
   resolved_cluster_arn = local.create_cluster ? aws_ecs_cluster.this[0].arn : var.cluster_arn
 
   log_group_name = "/aws/ecs/${var.name}"
