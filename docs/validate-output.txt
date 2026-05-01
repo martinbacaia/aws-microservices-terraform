@@ -16,8 +16,9 @@ $ for d in bootstrap modules/* environments/*; do
 ==> modules/ecs-service      Success! The configuration is valid.
 ==> modules/lambda-fn        Success! The configuration is valid.
 ==> modules/api-gateway      Success! The configuration is valid.
+==> modules/s3-bucket        Success! The configuration is valid.
 ==> environments/dev         Success! The configuration is valid.
 ==> environments/staging     Success! The configuration is valid.
 ==> environments/prod        Success! The configuration is valid.
 
-11/11 stacks pass `terraform validate` against the AWS provider ~> 5.70.
+12/12 stacks pass `terraform validate` against the AWS provider ~> 5.70.
