@@ -3,6 +3,11 @@ output "alb_arn" {
   value       = aws_lb.this.arn
 }
 
+output "alb_arn_suffix" {
+  description = "ARN suffix (`app/<name>/<id>`) — used as the LoadBalancer dimension on AWS/ApplicationELB CloudWatch metrics."
+  value       = aws_lb.this.arn_suffix
+}
+
 output "alb_dns_name" {
   description = "DNS name (CNAME target for Route 53 alias records)."
   value       = aws_lb.this.dns_name
