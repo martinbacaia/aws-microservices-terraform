@@ -1,0 +1,17 @@
+region             = "us-east-1"
+project            = "catalog"
+vpc_cidr           = "10.30.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+
+# These have no defaults — must be set on every apply.
+products_api_image_tag = "v1.0.0"
+image_resizer_tag      = "v1.0.0"
+
+certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/CHANGE-ME"
+alarm_email     = "platform-oncall@example.com"
+
+additional_tags = {
+  Owner       = "platform"
+  CostCenter  = "engineering"
+  DataClass   = "internal"
+}
