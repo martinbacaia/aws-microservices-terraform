@@ -1,0 +1,22 @@
+# Checkov config — see https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
+framework:
+  - terraform
+
+soft-fail: false
+
+# These are intentionally skipped with documented justification:
+# CKV_AWS_111 — IAM execution role wildcard on ECR/logs is required by AWS managed policy.
+# CKV_AWS_158 — Log group KMS keys are optional in dev (cost). Prod uses customer KMS.
+# CKV2_AWS_5  — Some SGs are intentionally created and attached via service modules.
+# CKV_AWS_115 — Lambda concurrency limits set per env, not in shared module.
+# CKV_AWS_116 — DLQ optional per function (handled in env composition).
+skip-check:
+  - CKV_AWS_111
+  - CKV_AWS_158
+  - CKV2_AWS_5
+  - CKV_AWS_115
+  - CKV_AWS_116
+
+download-external-modules: false
+quiet: true
+compact: true

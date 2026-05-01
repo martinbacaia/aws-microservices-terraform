@@ -1,0 +1,58 @@
+# Local .terraform directories
+**/.terraform/*
+**/.terraform.lock.hcl.bak
+
+# Terraform state files (must never be committed — backend is remote S3)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Sensitive variable files
+*.tfvars
+*.tfvars.json
+!example.tfvars
+!*.example.tfvars
+
+# Override files (local-only)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Plan output files
+*.tfplan
+*.plan
+plan.out
+plan.json
+
+# CLI configuration
+.terraformrc
+terraform.rc
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python (checkov, etc.)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Go (terratest)
+test/vendor/
+*.test
+
+# Lambda build artifacts (keep source, ignore zips)
+**/dist/
+**/build/
+*.zip
+!modules/lambda-fn/fixtures/*.zip
