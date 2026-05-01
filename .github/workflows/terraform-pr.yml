@@ -1,0 +1,155 @@
+name: terraform-pr
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "modules/**"
+      - "environments/**"
+      - "bootstrap/**"
+      - ".github/workflows/terraform-pr.yml"
+      - ".tflint.hcl"
+      - ".checkov.yml"
+
+permissions:
+  contents: read
+  id-token: write       # for OIDC to AWS
+  pull-requests: write  # for posting plan comments
+
+concurrency:
+  group: tf-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_VERSION: 1.9.8
+  TFLINT_VERSION: v0.53.0
+  CHECKOV_VERSION: 3.2.255
+  AWS_REGION: us-east-1
+
+jobs:
+  ##############################################################################
+  # Static checks — run on every push, no AWS required.
+  ##############################################################################
+  static:
+    name: fmt + validate + tflint + checkov
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: terraform fmt (recursive, check)
+        run: terraform fmt -check -recursive
+
+      - name: terraform validate (every stack)
+        run: |
+          set -euo pipefail
+          for d in bootstrap environments/*/; do
+            echo "::group::validate $d"
+            (cd "$d" && terraform init -backend=false -input=false && terraform validate)
+            echo "::endgroup::"
+          done
+
+      - name: setup tflint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+
+      - name: tflint init
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: tflint (modules + envs)
+        run: |
+          set -euo pipefail
+          tflint --recursive --config="$PWD/.tflint.hcl"
+
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install checkov
+        run: pip install "checkov==${{ env.CHECKOV_VERSION }}"
+
+      - name: checkov (modules + envs)
+        run: |
+          checkov \
+            --directory modules \
+            --directory environments \
+            --directory bootstrap \
+            --config-file .checkov.yml \
+            --output cli \
+            --output github_failed_only
+
+  ##############################################################################
+  # Plan against the dev backend and post the diff as a PR comment.
+  # Requires an OIDC role in AWS that can plan dev — see README.
+  ##############################################################################
+  plan-dev:
+    name: plan (dev)
+    needs: static
+    runs-on: ubuntu-latest
+    if: ${{ vars.AWS_ROLE_TO_ASSUME != '' }}
+
+    defaults:
+      run:
+        working-directory: environments/dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="kms_key_id=${{ vars.TF_STATE_KMS_KEY }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE }}"
+
+      - name: terraform plan
+        id: plan
+        run: |
+          set -o pipefail
+          terraform plan -no-color -input=false -out=plan.tfplan \
+            | tee plan.txt
+
+      - name: render plan summary
+        id: summary
+        run: |
+          {
+            echo "## Terraform plan — \`environments/dev\`"
+            echo ""
+            echo '```diff'
+            head -c 60000 plan.txt
+            echo ""
+            echo '```'
+          } > plan-comment.md
+
+          # GitHub comment payload
+          {
+            echo 'body<<EOF'
+            cat plan-comment.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: comment on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: tf-plan-dev
+          message: ${{ steps.summary.outputs.body }}

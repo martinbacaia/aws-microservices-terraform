@@ -1,0 +1,80 @@
+name: terraform-apply
+
+# Manual-only. Pushing to main does NOT auto-apply anywhere — every apply
+# requires an explicit dispatch with the target environment selected.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      products_api_image_tag:
+        description: "products-api image tag (overrides tfvars default)"
+        required: false
+        type: string
+      image_resizer_tag:
+        description: "image-resizer image tag (overrides tfvars default)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: tf-apply-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: 1.9.8
+  AWS_REGION: us-east-1
+
+jobs:
+  apply:
+    name: apply (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+
+    # The `environment` block triggers GitHub's required-reviewer gate.
+    # Configure required reviewers per environment in repo Settings → Environments.
+    environment:
+      name: ${{ inputs.environment }}
+
+    defaults:
+      run:
+        working-directory: environments/${{ inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="kms_key_id=${{ vars.TF_STATE_KMS_KEY }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE }}"
+
+      - name: terraform plan
+        env:
+          TF_VAR_products_api_image_tag: ${{ inputs.products_api_image_tag }}
+          TF_VAR_image_resizer_tag: ${{ inputs.image_resizer_tag }}
+        run: |
+          terraform plan -input=false -out=plan.tfplan
+
+      - name: terraform apply
+        run: terraform apply -input=false -auto-approve plan.tfplan
