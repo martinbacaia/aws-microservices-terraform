@@ -10,14 +10,14 @@ data "aws_iam_policy_document" "image_resizer_s3" {
     sid       = "ReadUploads"
     effect    = "Allow"
     actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.uploads.arn}/*"]
+    resources = ["${module.uploads_bucket.arn}/*"]
   }
 
   statement {
     sid       = "WriteThumbnails"
     effect    = "Allow"
     actions   = ["s3:PutObject", "s3:PutObjectAcl"]
-    resources = ["${aws_s3_bucket.thumbnails.arn}/*"]
+    resources = ["${module.thumbnails_bucket.arn}/*"]
   }
 }
 
@@ -36,7 +36,7 @@ module "image_resizer" {
   tracing_mode         = "Active"
 
   environment_variables = {
-    THUMBNAIL_BUCKET = aws_s3_bucket.thumbnails.id
+    THUMBNAIL_BUCKET = module.thumbnails_bucket.id
     THUMBNAIL_PREFIX = "thumbs/"
     LOG_LEVEL        = "info"
   }
@@ -47,7 +47,7 @@ module "image_resizer" {
 
   s3_event_sources = {
     uploads = {
-      bucket_arn    = aws_s3_bucket.uploads.arn
+      bucket_arn    = module.uploads_bucket.arn
       events        = ["s3:ObjectCreated:*"]
       filter_prefix = "uploads/"
     }

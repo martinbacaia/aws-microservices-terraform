@@ -9,7 +9,7 @@ module "alb" {
   certificate_arn     = var.certificate_arn
   deletion_protection = true
 
-  access_logs_bucket = aws_s3_bucket.alb_logs.id
+  access_logs_bucket = module.alb_logs_bucket.id
   access_logs_prefix = local.name
 
   tags = local.common_tags

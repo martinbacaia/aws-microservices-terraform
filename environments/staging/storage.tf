@@ -1,6 +1,5 @@
 ###############################################################################
-# S3 buckets + ECR repos — same hardening as dev. Bucket names share the
-# random suffix so two envs cannot collide on global namespace.
+# Storage — buckets via modules/s3-bucket, plus ECR repos.
 ###############################################################################
 resource "random_id" "suffix" {
   byte_length = 4
@@ -10,124 +9,41 @@ locals {
   bucket_suffix = random_id.suffix.hex
 }
 
-resource "aws_s3_bucket" "uploads" {
-  bucket = "${local.name}-uploads-${local.bucket_suffix}"
-  tags   = local.common_tags
+module "uploads_bucket" {
+  source = "../../modules/s3-bucket"
+
+  name                               = "${local.name}-uploads-${local.bucket_suffix}"
+  noncurrent_version_expiration_days = 60
+
+  tags = local.common_tags
 }
 
-resource "aws_s3_bucket_versioning" "uploads" {
-  bucket = aws_s3_bucket.uploads.id
-  versioning_configuration { status = "Enabled" }
+module "thumbnails_bucket" {
+  source = "../../modules/s3-bucket"
+
+  name = "${local.name}-thumbnails-${local.bucket_suffix}"
+
+  tags = local.common_tags
 }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "uploads" {
-  bucket = aws_s3_bucket.uploads.id
-  rule {
-    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
-  }
-}
+module "alb_logs_bucket" {
+  source = "../../modules/s3-bucket"
 
-resource "aws_s3_bucket_public_access_block" "uploads" {
-  bucket                  = aws_s3_bucket.uploads.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
+  name                    = "${local.name}-alb-logs-${local.bucket_suffix}"
+  expiration_days         = 180
+  deny_insecure_transport = false
 
-resource "aws_s3_bucket_ownership_controls" "uploads" {
-  bucket = aws_s3_bucket.uploads.id
-  rule { object_ownership = "BucketOwnerEnforced" }
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
-  bucket = aws_s3_bucket.uploads.id
-
-  rule {
-    id     = "expire-noncurrent"
-    status = "Enabled"
-    filter {}
-    noncurrent_version_expiration { noncurrent_days = 60 }
-    abort_incomplete_multipart_upload { days_after_initiation = 7 }
-  }
-}
-
-resource "aws_s3_bucket" "thumbnails" {
-  bucket = "${local.name}-thumbnails-${local.bucket_suffix}"
-  tags   = local.common_tags
-}
-
-resource "aws_s3_bucket_versioning" "thumbnails" {
-  bucket = aws_s3_bucket.thumbnails.id
-  versioning_configuration { status = "Enabled" }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "thumbnails" {
-  bucket = aws_s3_bucket.thumbnails.id
-  rule {
-    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "thumbnails" {
-  bucket                  = aws_s3_bucket.thumbnails.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_ownership_controls" "thumbnails" {
-  bucket = aws_s3_bucket.thumbnails.id
-  rule { object_ownership = "BucketOwnerEnforced" }
-}
-
-resource "aws_s3_bucket" "alb_logs" {
-  bucket = "${local.name}-alb-logs-${local.bucket_suffix}"
-  tags   = local.common_tags
-}
-
-resource "aws_s3_bucket_versioning" "alb_logs" {
-  bucket = aws_s3_bucket.alb_logs.id
-  versioning_configuration { status = "Enabled" }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs" {
-  bucket = aws_s3_bucket.alb_logs.id
-  rule {
-    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "alb_logs" {
-  bucket                  = aws_s3_bucket.alb_logs.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_ownership_controls" "alb_logs" {
-  bucket = aws_s3_bucket.alb_logs.id
-  rule { object_ownership = "BucketOwnerEnforced" }
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "alb_logs" {
-  bucket = aws_s3_bucket.alb_logs.id
-  rule {
-    id     = "expire-old-logs"
-    status = "Enabled"
-    filter {}
-    expiration { days = 180 }
-  }
+  tags = local.common_tags
 }
 
 data "aws_iam_policy_document" "alb_logs" {
+  source_policy_documents = [module.alb_logs_bucket.tls_only_statement_json]
+
   statement {
     sid       = "ELBAccessLogsPut"
     effect    = "Allow"
     actions   = ["s3:PutObject"]
-    resources = ["${aws_s3_bucket.alb_logs.arn}/*"]
+    resources = ["${module.alb_logs_bucket.arn}/*"]
 
     principals {
       type        = "AWS"
@@ -139,7 +55,7 @@ data "aws_iam_policy_document" "alb_logs" {
     sid       = "AWSLogDeliveryWrite"
     effect    = "Allow"
     actions   = ["s3:PutObject"]
-    resources = ["${aws_s3_bucket.alb_logs.arn}/*"]
+    resources = ["${module.alb_logs_bucket.arn}/*"]
 
     principals {
       type        = "Service"
@@ -151,7 +67,7 @@ data "aws_iam_policy_document" "alb_logs" {
     sid       = "AWSLogDeliveryAclCheck"
     effect    = "Allow"
     actions   = ["s3:GetBucketAcl"]
-    resources = [aws_s3_bucket.alb_logs.arn]
+    resources = [module.alb_logs_bucket.arn]
 
     principals {
       type        = "Service"
@@ -161,7 +77,7 @@ data "aws_iam_policy_document" "alb_logs" {
 }
 
 resource "aws_s3_bucket_policy" "alb_logs" {
-  bucket = aws_s3_bucket.alb_logs.id
+  bucket = module.alb_logs_bucket.id
   policy = data.aws_iam_policy_document.alb_logs.json
 }
 

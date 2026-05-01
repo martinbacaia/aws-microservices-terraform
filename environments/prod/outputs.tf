@@ -25,12 +25,12 @@ output "image_resizer_ecr_url" {
 
 output "uploads_bucket" {
   description = "Source images bucket."
-  value       = aws_s3_bucket.uploads.id
+  value       = module.uploads_bucket.id
 }
 
 output "thumbnails_bucket" {
   description = "Thumbnails bucket."
-  value       = aws_s3_bucket.thumbnails.id
+  value       = module.thumbnails_bucket.id
 }
 
 output "api_invoke_url" {
